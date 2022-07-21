@@ -1,0 +1,72 @@
+
+def prepare(filename : str, threshold : float):
+    global dictio
+    dictio = {}
+    with open(filename) as file:
+        for line in file:
+            listing = line.split(",")
+            if listing[0] not in dictio.keys():
+                dictio[listing[0]] = [0, 0, 0]                                     # adding a list containing initial and final price, return will be added afterwards.
+            if listing[0] in dictio.keys() and listing[1] == '365':
+                dictio[listing[0]][0] = listing[2]
+            if listing[0] in dictio.keys() and listing[1] == '730':
+                dictio[listing[0]][1] = listing[2]
+    file.close()
+
+    for k,v in dictio.items():
+        x = float(v[0])
+        y = float(v[1])
+        if x == 0:
+            dictio[k][2] = float(1)             #returns are computed, extracting and turning string into float and then perform the calculations (note that if initial price is o then the return is 1!!!)
+        elif x != 0:
+            dictio[k][2] = (y - x) / x
+
+
+    global correlatedstocks
+    global listofstocks
+    correlatedstocks = {}                      #creating our sort of graph consisting of all stocks with an adjacency list containing the correlated stocks.
+    listofstocks = list(dictio.keys())
+
+    for st in listofstocks:
+        correlatedstocks[st] = list()
+        for trial in listofstocks:
+            if abs(dictio[st][2] - dictio[trial][2]) < threshold:
+                try:
+                    correlatedstocks[st].append(trial)
+                except KeyError:
+                     trial == st
+
+
+
+def query(stock : str, corr_level : int) -> list:
+    k = 0
+    queue = [stock]
+    visited = [stock]
+    listbylevel = [stock]
+    provlist = []
+    sortedlist = []
+
+
+    while k < corr_level:                 #same approach of bfs, while our counter k is < corr_level, a list containing all correlatedstocks to the enqueued is made, and deleted whether
+         if len(queue) == 0:              # we pass onto the next level
+             return list()
+
+         listbylevel.pop(0)              #deleting and dequeueing the visited nodes so that at (corr_level+1) they will not be explored again
+         s = queue.pop(0)
+         for v in correlatedstocks[s]:
+             if v not in visited:
+                 visited.append(v)
+                 queue.append(v)
+                 provlist.append(v)
+
+         if len(listbylevel) == 0:
+             listbylevel = provlist
+             provlist = list()
+             k += 1
+
+    while len(listbylevel) > 0:                   #simply sorting using selectionsort, one could also use quicksort as the input size may be large but in this case not enough. Anytime min is extracted and gets removed.
+        leastel = min(listbylevel)
+        sortedlist.append(leastel)
+        listbylevel.remove(leastel)
+
+    return sortedlist        #our list of correlated stocks at corr_level is returned!
